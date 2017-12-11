@@ -8,8 +8,8 @@ var schema = new mongoose.Schema({
   creator: {
     id: { type: ObjectId, ref: models.user.name, required: true },
     name: { type: String }
-  },
+  }
 
 });
 
-module.exports = mongoose.model(models.board.name, schema);
+module.exports = mongoose.model(models.message.name, schema);

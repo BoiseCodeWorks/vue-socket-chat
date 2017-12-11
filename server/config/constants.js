@@ -7,7 +7,7 @@ const actions = {
 }
 
 const models = {
-  board: {
+  message: {
     name: 'Message',
     endpoint: 'messages'
   },
