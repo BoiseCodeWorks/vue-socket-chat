@@ -5,7 +5,7 @@ router.post('/register', (req, res) => {
   Users.create(req.body)
     .then((user) => {
       req.session.uid = user._id
-      req.session.displayName = user.name
+      req.session.name = user.name
       req.session.save()
       user.password = null
       delete user.password
@@ -29,7 +29,7 @@ router.post('/login', (req, res) => {
             return res.send({error: 'Invalid Email or Password'})
           }
           req.session.uid = user._id;
-          req.session.displayName = user.name
+          req.session.name = user.name
           req.session.save()
           user.password = null
           delete user.password
@@ -60,6 +60,8 @@ router.delete('/logout', (req, res) => {
 
 router.get('/authenticate', (req,res) => {
   Users.findById(req.session.uid).then(user => {
+    req.session.name = user.name
+    req.session.save()
     return res.send ({
       data: user
     })

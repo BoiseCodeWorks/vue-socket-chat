@@ -1,60 +1,66 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import axios from 'axios'
+import authStore from './auth-store'
 import socketStore from './socket-store'
 
-let auth = axios.create({
-    baseURL: '//localhost:3000/',
-    timeout: 2000,
-    withCredentials: true
-})
 let api = axios.create({
     baseURL: '//localhost:3000/api/',
     timeout: 2000,
     withCredentials: true
 })
 
-
 Vue.use(Vuex)
 
 var store = new Vuex.Store({
     state: {
-        user: {}
+        user: {},
+        messages: []
     },
     modules:{
+        authStore,
         socketStore
     },
     mutations: {
         setUser(state, user) {
             state.user = user
+        },
+        setResource(state, payload){
+            state[payload.resource] = payload.data
+        },
+        addToResource(state, payload){
+            if(Array.isArray(state[payload.resource])){
+                state[payload.resource].push(payload.data)
+            }else if(typeof state[payload.resource] == 'object'){
+                state[payload.resource][payload.data._id] = payload.data
+            }
         }
     },
     actions: {
-        login({ commit, dispatch }, payload) {
-            auth.post('login', payload).then(res => {
-                var user = res.data.data
-                if(user){
-                    commit('setUser', user)
-                    dispatch('initSocket', user)
+        create({commit, dispatch}, payload){
+            api.post(payload.endpoint, payload.data).then(res => {
+                payload.data = res.data.data
+                commit('setResource', payload)
+                if(payload.emit){
+                    payload.mutation = 'setResource'
+                    dispatch('emitData', payload)
                 }
             })
         },
-        register({ commit, dispatch }, payload) {
-            auth.post('register', payload).then(res => {
-                var user = res.data.data
-                if(user){
-                    commit('setUser', user)
-                    dispatch('initSocket', user)
+        createOne({commit, dispatch}, payload){
+            api.post(payload.endpoint, payload.data).then(res => {
+                payload.data = res.data.data
+                commit('addToResource', payload)
+                if(payload.emit){
+                    payload.mutation = 'addToResource'
+                    dispatch('emitData', payload)
                 }
             })
         },
-        authenticate({ commit, dispatch }) {
-            auth('authenticate').then(res => {
-                var user = res.data.data
-                if(user){
-                    commit('setUser', user)
-                    dispatch('initSocket', user)
-                }
+        get({commit, dispatch}, payload){
+            api(payload.endpoint).then(res => {
+                payload.data = res.data.data
+                commit('setResource', payload)
             })
         }
     }

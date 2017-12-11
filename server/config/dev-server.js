@@ -67,7 +67,11 @@ io.on('connection', function (socket) {
         })
         console.log(connectedUsers)
     })
-    
+
+    socket.on('update', payload => {
+        socket.broadcast.emit('receiveUpdate', payload)
+    })
+
     socket.on('disconnect', () => {
         delete connectedUsers[client._id]
         socket.broadcast.emit('userDisconnected', client._id)
