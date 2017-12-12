@@ -55,7 +55,7 @@ let rooms = {
     }
 }
 
-function Room(name, client){
+function Room(name, client) {
     this.name = name
     this.users = {}
     this.moderators = {}
@@ -65,35 +65,37 @@ function Room(name, client){
     rooms[name.toLowerCase()] = this
 }
 
-function joinRoom(socket, roomName, client){
+function joinRoom(socket, roomName, client) {
     var room = rooms[roomName.toLowerCase()] || new Room(roomName, client)
     socket.join(room.name)
     room.users[client.userId] = client
-    socket.to(room.name).emit('userConnected', {
+    socket.to(room.name).emit('userJoined', {
         userId: client.userId,
         name: client.name
     })
-    console.log(rooms)
+    socket.emit('joinedRoom', room)
     return room
 }
 
 io.on('connection', function (socket) {
     var client = {}
     var activeRoom = {}
-    
+
     socket.emit('CONNECTED', {
         socket: socket.id,
         message: 'Welcome to the Jungle',
         connectedUsers
     })
-    
+
     socket.on('setUser', (user) => {
         client = {
             userId: user._id,
             name: user.name
         }
         connectedUsers[user._id] = client
+        joinRoom(socket, client.userId, client)
         activeRoom = joinRoom(socket, rooms.general.name, client)
+        socket.broadcast.emit('userConnected', client)
     })
 
     socket.on('update', payload => {
@@ -101,14 +103,19 @@ io.on('connection', function (socket) {
     })
 
     socket.on('joinRoom', roomName => {
-        activeRoom = joinRoom(roomName)
+        activeRoom = joinRoom(socket, roomName, client)
     })
 
+    socket.on('leaveRoom', roomName => {
+        if (roomName.toLowerCase() == 'general' || roomName == client.userId) { return }
+        socket.leave(roomName)
+        socket.to(roomName).emit('userLeft', client)
+        socket.emit('leftRoom', rooms.general)
+    })
 
     socket.on('disconnect', () => {
         delete connectedUsers[client._id]
-        //CLEANUP ROOM USERS
-
+        //CLEANUP ROOM USERs
         socket.broadcast.emit('userDisconnected', client._id)
     })
 
