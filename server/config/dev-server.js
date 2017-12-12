@@ -46,34 +46,69 @@ let io = require('socket.io')(server, {
 })
 
 let connectedUsers = {}
+let rooms = {
+    general: {
+        name: 'General',
+        users: {},
+        moderators: {},
+        banned: {}
+    }
+}
+
+function Room(name, client){
+    this.name = name
+    this.users = {}
+    this.moderators = {}
+    this.moderators[client.userId] = client
+    this.users[client.userId] = client
+    this.banned = {}
+    rooms[name.toLowerCase()] = this
+}
+
+function joinRoom(socket, roomName, client){
+    var room = rooms[roomName.toLowerCase()] || new Room(roomName, client)
+    socket.join(room.name)
+    room.users[client.userId] = client
+    socket.to(room.name).emit('userConnected', {
+        userId: client.userId,
+        name: client.name
+    })
+    console.log(rooms)
+    return room
+}
 
 io.on('connection', function (socket) {
     var client = {}
+    var activeRoom = {}
+    
     socket.emit('CONNECTED', {
         socket: socket.id,
         message: 'Welcome to the Jungle',
         connectedUsers
     })
-
+    
     socket.on('setUser', (user) => {
-        client = user
-        connectedUsers[user._id] = {
+        client = {
             userId: user._id,
             name: user.name
         }
-        socket.broadcast.emit('userConnected', {
-            userId: user._id,
-            name: user.name
-        })
-        console.log(connectedUsers)
+        connectedUsers[user._id] = client
+        activeRoom = joinRoom(socket, rooms.general.name, client)
     })
 
     socket.on('update', payload => {
-        socket.broadcast.emit('receiveUpdate', payload)
+        socket.to(activeRoom.name).emit('receiveUpdate', payload)
     })
+
+    socket.on('joinRoom', roomName => {
+        activeRoom = joinRoom(roomName)
+    })
+
 
     socket.on('disconnect', () => {
         delete connectedUsers[client._id]
+        //CLEANUP ROOM USERS
+
         socket.broadcast.emit('userDisconnected', client._id)
     })
 
