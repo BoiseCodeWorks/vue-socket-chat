@@ -41,9 +41,11 @@ app.use(Validate)
 app.use('/api', api)
 app.use('/', defaultErrorHandler)
 
+//region ****** CAREFUL SOCKETS BELOW **********
 let io = require('socket.io')(server, {
     origins: '*:*'
 })
+
 
 let connectedUsers = {}
 let rooms = {
@@ -120,5 +122,7 @@ io.on('connection', function (socket) {
     })
 
 })
+
+//endregion
 
 module.exports = server
